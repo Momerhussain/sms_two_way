@@ -11,3 +11,6 @@ npm run pm2:start
 
 npm run pm2:stop
 npm run pm2:delete
+
+pm2 start ecosystem.config.js
+

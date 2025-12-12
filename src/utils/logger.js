@@ -3,13 +3,14 @@ import winston from 'winston';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-
+import 'dotenv/config'
 
 // __dirname workaround for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+console.log(process.env.LOG_TO_FILE);
 
-const logToFile = 'true';
+const logToFile = process.env.LOG_TO_FILE;
 
 // Ensure logs folder exists
 const logDir = path.join(__dirname, '../../logs');
@@ -30,7 +31,7 @@ const transports = [
 if (logToFile) {
   transports.push(
     new winston.transports.File({
-      filename: path.join(__dirname, '../logs/app.log'),
+      filename: path.join(__dirname, '../../logs/app.log'),
       maxsize: 5 * 1024 * 1024, // 5MB rotation
       maxFiles: 5,
       tailable: true,
@@ -48,5 +49,7 @@ const logger = winston.createLogger({
   ),
   transports,
 });
+
+// logger.info('PM2 app started successfully');
 
 export default logger;

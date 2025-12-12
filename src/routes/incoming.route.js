@@ -174,87 +174,106 @@ userRouter2.post('/', asyncHandler(async (req, res) => {
   }
 }));
 
-userRouter2.get('/', 
-  asyncHandler(async (req, res) => {
-  console.log(req.body,'req');
-  // return
-  
+userRouter2.get('/', asyncHandler(async (req, res) => {
   try {
-    const { to, from, content } = req.body;
+    const { to, from, content } = req.query;
     if (!to || !from || !content) {
+      logger.warn('Missing required fields in request');
       return res.status(400).json({ error: 'Missing required fields: to, from, content' });
     }
 
-    const parts = content.trim().split(/\s+/);
-    const command = parts[0].toUpperCase();
+    // Enqueue the job and respond immediately
+    const job = await smsQueue.add({ to, from, content }, { removeOnComplete: true, removeOnFail: true });
+    logger.info(`Enqueued SMS job id=${job.id} from=${from} content=${content}`);
 
-    let resultMessage;
-
-    switch (command) {
-      case 'ACC': {
-        const accountNo = parts[1];
-        if (!accountNo) throw new Error('Missing account number');
-        const result = await fetchAccountInfo(accountNo, from);
-        resultMessage = result.message; // Assuming your service returns a message field
-        break;
-      }
-
-      // case 'ZS': {
-      //   const accountNo = parts[1];
-      //   if (!accountNo) throw new Error('Missing account number');
-      //   const result = await getZakatStatus(accountNo, from);
-      //   resultMessage = result.message;
-      //   break;
-      // }
-
-      // case 'ES': {
-      //   const [ , accountNo, frequency, subscriptionStatus, physicalStmt ] = parts;
-      //   if (!accountNo || !frequency || !subscriptionStatus || !physicalStmt) {
-      //     throw new Error('Invalid EStatement request format');
-      //   }
-      //   const result = await requestEStatement(accountNo, from, frequency, subscriptionStatus, physicalStmt);
-      //   resultMessage = result.message;
-      //   break;
-      // }
-
-      // case 'HELP': {
-      //   const result = await getHelpAssistance();
-      //   resultMessage = result.message;
-      //   break;
-      // }
-
-      // case 'MS': {
-      //   const accountNo = parts[1];
-      //   if (!accountNo) throw new Error('Missing account number');
-      //   const result = await getMiniStatement(accountNo, from);
-      //   resultMessage = result.message;
-      //   break;
-      // }
-
-      default:
-        return res.status(400).json({ error: 'Unknown command in content' });
-    }
-
-    // Prepare payload for external SMS API
-    const smsPayload = {
-      from: '8888',
-      to: `+${from}`,  // ensure country code
-      text: resultMessage
-    };
-
-    // Send to external SMS API
-    await axios.post(SMS_API_URL, smsPayload, {
-      headers: { 'x-api-key': SMS_API_KEY }
-    });
-
-    // Return success response
-    return res.json({ status: 'success', sentTo: from, command, message: resultMessage });
+    return res.status(202).json({ status: 'queued', jobId: job.id });
   } catch (err) {
-    console.error('Error processing incoming SMS:', err.message);
-    return res.status(500).json({ error: err.message });
+    logger.error(`Error enqueuing SMS job: ${err.message}`);
+    return res.status(500).json({ error: 'Failed to enqueue SMS job' });
   }
-})
-);
+}));
+
+// userRouter2.get('/', 
+//   asyncHandler(async (req, res) => {
+//   console.log(req.body,'req');
+//   // return
+  
+//   try {
+//     const { to, from, content } = req.body;
+//     if (!to || !from || !content) {
+//       return res.status(400).json({ error: 'Missing required fields: to, from, content' });
+//     }
+
+//     const parts = content.trim().split(/\s+/);
+//     const command = parts[0].toUpperCase();
+
+//     let resultMessage;
+
+//     switch (command) {
+//       case 'ACC': {
+//         const accountNo = parts[1];
+//         if (!accountNo) throw new Error('Missing account number');
+//         const result = await fetchAccountInfo(accountNo, from);
+//         resultMessage = result.message; // Assuming your service returns a message field
+//         break;
+//       }
+
+//       // case 'ZS': {
+//       //   const accountNo = parts[1];
+//       //   if (!accountNo) throw new Error('Missing account number');
+//       //   const result = await getZakatStatus(accountNo, from);
+//       //   resultMessage = result.message;
+//       //   break;
+//       // }
+
+//       // case 'ES': {
+//       //   const [ , accountNo, frequency, subscriptionStatus, physicalStmt ] = parts;
+//       //   if (!accountNo || !frequency || !subscriptionStatus || !physicalStmt) {
+//       //     throw new Error('Invalid EStatement request format');
+//       //   }
+//       //   const result = await requestEStatement(accountNo, from, frequency, subscriptionStatus, physicalStmt);
+//       //   resultMessage = result.message;
+//       //   break;
+//       // }
+
+//       // case 'HELP': {
+//       //   const result = await getHelpAssistance();
+//       //   resultMessage = result.message;
+//       //   break;
+//       // }
+
+//       // case 'MS': {
+//       //   const accountNo = parts[1];
+//       //   if (!accountNo) throw new Error('Missing account number');
+//       //   const result = await getMiniStatement(accountNo, from);
+//       //   resultMessage = result.message;
+//       //   break;
+//       // }
+
+//       default:
+//         return res.status(400).json({ error: 'Unknown command in content' });
+//     }
+
+//     // Prepare payload for external SMS API
+//     const smsPayload = {
+//       from: '8888',
+//       to: `+${from}`,  // ensure country code
+//       text: resultMessage
+//     };
+
+//     // Send to external SMS API
+//     await axios.post(SMS_API_URL, smsPayload, {
+//       headers: { 'x-api-key': SMS_API_KEY }
+//     });
+
+//     // Return success response
+//     return res.json({ status: 'success', sentTo: from, command, message: resultMessage });
+//   } catch (err) {
+//     console.error('Error processing incoming SMS:', err.message);
+//     return res.status(500).json({ error: err.message });
+//   }
+// })
+// );
 
 
 // export default router;

@@ -2,6 +2,7 @@ import axios from 'axios';
 import  authToken  from './auth.js';
 import { getErrorMessage } from '../utils/errorCodes.js';
 import logger from '../utils/logger.js';
+import { generateHeaders } from '../utils/helper.js';
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000; // 1 second
 
@@ -16,11 +17,20 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function fetchAccountInfo(accountNo, mobileNumber) {
   const token = await authToken();
   const endpoint = process.env.ACCOUNT_INFO_URL;
+  const eoceanHeaders = generateHeaders({
+  CLIENT_ID,
+  CLIENT_SECRET,
+  USERNAME,
+  PASSWORD,
+  CHANNEL_ID,
+  SYSTEM_IP,
+});
 
   const requestBody = {
-    AccountNo: accountNo,
-    MobileNumber: mobileNumber,
+    AccountNo: "1919",
+    MobileNumber:'923425114678',
   };
+  
   logger.info(
     `📨 [AccountInfo] Request started for Mobile: ${mobileNumber}, Account: ${accountNo}`
   );
@@ -30,6 +40,7 @@ async function fetchAccountInfo(accountNo, mobileNumber) {
 
       const response = await axios.post(endpoint, requestBody, {
         headers: {
+          ...eoceanHeaders,
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
