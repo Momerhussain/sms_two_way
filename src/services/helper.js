@@ -1,6 +1,8 @@
 import axios from 'axios';
 import  authToken  from './auth.js';
 import { getErrorMessage } from '../utils/errorCodes.js';
+import { api } from '../utils/axios-client.js';
+import generateHeaders from '../utils/helper.js';
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000; // 1 second
@@ -13,6 +15,8 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 export async function getHelpAssistance() {
   const token = await authToken();
+  const eoceanHeaders = generateHeaders();
+  
   const endpoint = process.env.HELP_URL;
 
   const requestBody = {
@@ -21,8 +25,9 @@ export async function getHelpAssistance() {
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const response = await axios.post(endpoint, requestBody, {
+      const response = await api.post(endpoint, requestBody, {
         headers: {
+          ...eoceanHeaders,
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
@@ -37,7 +42,7 @@ export async function getHelpAssistance() {
       const message = getErrorMessage(data.ResponseCode);
 
       if (data.ResponseCode !== '000000') {
-        return { raw: data, error: message };
+        return { raw: data, message: message };
       }
 
       // Format response according to template

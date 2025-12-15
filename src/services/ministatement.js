@@ -1,6 +1,7 @@
 import axios from 'axios';
 import  authToken  from './auth.js';
 import { getErrorMessage } from '../utils/errorCodes.js';
+import generateHeaders from '../utils/helper.js';
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000; // 1 second
@@ -15,6 +16,8 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 async function getMiniStatement(accountNo, mobileNumber) {
   const token = await authToken();
+  const eoceanHeaders = generateHeaders();
+  
   const endpoint = process.env.MINISTATEMENT_URL;
 
   const requestBody = {
@@ -26,6 +29,7 @@ async function getMiniStatement(accountNo, mobileNumber) {
     try {
       const response = await axios.post(endpoint, requestBody, {
         headers: {
+          ...eoceanHeaders,
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },

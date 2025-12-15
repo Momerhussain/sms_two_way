@@ -1,6 +1,8 @@
 import axios from 'axios';
 import  authToken  from './auth.js';
 import { getErrorMessage } from '../utils/errorCodes.js';
+import generateHeaders from '../utils/helper.js';
+import { api } from '../utils/axios-client.js';
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000; // 1 second
@@ -18,6 +20,8 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 async function requestEStatement(accountNo, mobileNumber, frequency, subscriptionStatus, physicalStmt) {
   const token = await authToken();
+  const eoceanHeaders = generateHeaders();
+  
   const endpoint = process.env.ESTATEMENT_URL;
 
   const requestBody = {
@@ -30,8 +34,9 @@ async function requestEStatement(accountNo, mobileNumber, frequency, subscriptio
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const response = await axios.post(endpoint, requestBody, {
+      const response = await api.post(endpoint, requestBody, {
         headers: {
+          ...eoceanHeaders,
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
@@ -42,11 +47,12 @@ async function requestEStatement(accountNo, mobileNumber, frequency, subscriptio
       if (!data) {
         throw new Error('Invalid response from EOCEAN API');
       }
-
+      console.log(data.ResponseCode,'data.ResponseCode');
+      
       const message = getErrorMessage(data.ResponseCode);
 
-      if (data.ResponseCode !== '000000') {
-        return { raw: data, error: message };
+      if (data.ResponseCode !== '000125') {
+        return { raw: data, message: message };
       }
 
       // Format response according to template

@@ -1,6 +1,8 @@
 import axios from 'axios';
 import  authToken  from './auth.js';
 import { getErrorMessage } from '../utils/errorCodes.js';
+import generateHeaders from '../utils/helper.js';
+import { api } from '../utils/axios-client.js';
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000; // 1 second delay between retries
@@ -15,6 +17,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 async function getZakatStatus(accountNo, mobileNumber) {
   const token = await authToken();
+  const eoceanHeaders = generateHeaders();
   const endpoint = process.env.ZAKAT_STATUS_URL;
 
   const requestBody = {
@@ -24,8 +27,9 @@ async function getZakatStatus(accountNo, mobileNumber) {
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const response = await axios.post(endpoint, requestBody, {
+      const response = await api.post(endpoint, requestBody, {
         headers: {
+          ...eoceanHeaders,
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
@@ -39,8 +43,8 @@ async function getZakatStatus(accountNo, mobileNumber) {
 
       const message = getErrorMessage(data.ResponseCode);
 
-      if (data.ResponseCode !== '000000') {
-        return { raw: data, error: message };
+      if (data.ResponseCode !== '000122') {
+        return { raw: data, message: message };
       }
 
       // Format response according to template

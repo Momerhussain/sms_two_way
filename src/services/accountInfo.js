@@ -2,7 +2,8 @@ import axios from 'axios';
 import  authToken  from './auth.js';
 import { getErrorMessage } from '../utils/errorCodes.js';
 import logger from '../utils/logger.js';
-import { generateHeaders } from '../utils/helper.js';
+import  generateHeaders  from '../utils/helper.js';
+import { api } from '../utils/axios-client.js';
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000; // 1 second
 
@@ -17,18 +18,11 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function fetchAccountInfo(accountNo, mobileNumber) {
   const token = await authToken();
   const endpoint = process.env.ACCOUNT_INFO_URL;
-  const eoceanHeaders = generateHeaders({
-  CLIENT_ID,
-  CLIENT_SECRET,
-  USERNAME,
-  PASSWORD,
-  CHANNEL_ID,
-  SYSTEM_IP,
-});
+  const eoceanHeaders = generateHeaders();
 
   const requestBody = {
-    AccountNo: "1919",
-    MobileNumber:'923425114678',
+    AccountNo: accountNo,
+    MobileNumber:mobileNumber,
   };
   
   logger.info(
@@ -37,15 +31,15 @@ async function fetchAccountInfo(accountNo, mobileNumber) {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       logger.debug(`[AccountInfo] Attempt ${attempt}: Sending POST to ${endpoint}`);
-
-      const response = await axios.post(endpoint, requestBody, {
+      
+      const response = await api.post(endpoint, requestBody, {
         headers: {
           ...eoceanHeaders,
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-
+      
       const data = response.data?.AccountInformationResponse;
 
         if (!data) {
@@ -56,12 +50,11 @@ async function fetchAccountInfo(accountNo, mobileNumber) {
       );
 
       const message = getErrorMessage(data.ResponseCode);
-
       if (data.ResponseCode !== '000000') {
       logger.warn(
           `[AccountInfo] Non-success response for ${mobileNumber} - Code: ${data.ResponseCode}, Message: ${message}`
         );
-        return { raw: data, error: message };
+        return { raw: data,message:message};
       }
 
       // Format the response according to your template
