@@ -1,21 +1,12 @@
-import axios from 'axios';
-import  authToken  from './auth.js';
-import { getErrorMessage } from '../utils/errorCodes.js';
-import generateHeaders from '../utils/helper.js';
-import { api } from '../utils/axios-client.js';
+import { api } from "../utils/axios-client.js";
+import { getErrorMessage } from "../utils/errorCodes.js";
+import generateHeaders from "../utils/helper.js";
+import logger from "../utils/logger.js";
+import authToken from "./auth.js";
+const MAX_RETRIES = 3; 
+const RETRY_DELAY_MS = 1000; // 1 second delay between retries const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 1000; // 1 second delay between retries
-
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/**
- * Fetch Zakat Status for a given account
- * @param {string} accountNo Last 4 digits of the account
- * @param {string} mobileNumber Mobile number of the user
- * @returns {object} Formatted Zakat status
- */
-async function getZakatStatus(accountNo, mobileNumber) {
+export default async function getZakatStatus(accountNo, mobileNumber) {
   const token = await authToken();
   const eoceanHeaders = generateHeaders();
   const endpoint = process.env.ZAKAT_STATUS_URL;
@@ -41,40 +32,63 @@ async function getZakatStatus(accountNo, mobileNumber) {
         throw new Error('Invalid response from EOCEAN API');
       }
 
-      const message = getErrorMessage(data.ResponseCode);
+      const { ResponseCode, AccountNo, ResponseMessage } = data;
+      const zakatStatus = extractZakatStatus(ResponseMessage);
+      
+      // -------- TEMPLATE HANDLING --------
+      if (ResponseCode === '000122') {
+        // Current Account – Not Required
+        const formattedMessage =
+          `Dear Customer, your zakat status is “${zakatStatus}” ` +
+          `for your Current Account ending with ${AccountNo}. ` +
+          `Helpline: 042111000622.`;
 
-      if (data.ResponseCode !== '000122') {
-        return { raw: data, message: message };
+        return { raw: data, message: formattedMessage };
       }
 
-      // Format response according to template
-      const formattedMessage = `
-Dear Customer, your current Zakat Status for (Acc. ending with ${data.AccountNo}) is "${data.ResponseMessage}". Helpline: 042111000622
-`;
+      if (ResponseCode === '000128') {
+        // Savings Account – Exempt / Not Exempt
+        const formattedMessage =
+          `Dear Customer, your current Zakat status for your Savings Account ` +
+          `ending with ${AccountNo} is “${zakatStatus}”. ` +
+          `Helpline: 042111000622.`;
 
+        return { raw: data, message: formattedMessage };
+      }
+
+      const message=getErrorMessage(ResponseCode)
+      if(!message){
+      logger.warn(
+          `[Zakatstatus] No Error code found response for ${mobileNumber} Account: ${accountNo} - Code: ${ResponseCode}, Message: ${message}`
+        );
+        return { raw: null,message:null};
+      }
+      // -------- DEFAULT HANDLING --------
       return {
         raw: data,
-        message: formattedMessage.trim(),
+        message: getErrorMessage(ResponseCode)
       };
+
     } catch (error) {
       console.error(`❌ Attempt ${attempt} failed:`, error.response?.data || error.message);
+
       if (attempt < MAX_RETRIES) {
         console.log(`⏳ Retrying in ${RETRY_DELAY_MS}ms...`);
         await delay(RETRY_DELAY_MS);
       } else {
-        throw new Error(`Max retries reached: Failed to fetch Zakat Status`);
+        throw new Error('Max retries reached: Failed to fetch Zakat Status');
       }
     }
   }
 }
-export default getZakatStatus
 
-async function test() {
-  try {
-    const result = await getZakatStatus('8319', '923012240575');
-    console.log('Raw:', result.raw);
-    console.log('Message:', result.message);
-  } catch (err) {
-    console.error(err.message);
-  }
+function extractZakatStatus(responseMessage = '') {
+  const message = responseMessage.toLowerCase();
+
+  if (message.includes('exempted') || message.includes('exempt')) return 'Exempt';
+  if (message.includes('not exempt') || message.includes('not exempted')) return 'Not Exempt';
+  if (message.includes('not required')) return 'Not Required';
+  if (message.includes('required')) return 'Required';
+
+  return 'Unknown';
 }

@@ -1,5 +1,9 @@
 import axios from "axios";
 import  authToken  from './auth.js';
+import { api } from "../utils/axios-client.js";
+import generateHeaders from "../utils/helper.js";
+import { getErrorMessage } from "../utils/errorCodes.js";
+import logger from "../utils/logger.js";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000; // 1 second delay
@@ -14,19 +18,24 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * @returns {Promise<object>} Formatted subscription status response
  */
 export async function getSubscriptionStatus(accountNo, mobileNumber, subscriptionStatus) {
+  console.log(subscriptionStatus,'subscriptionStatus-----------------');
+  
   const token = await authToken();
+  const eoceanHeaders = generateHeaders();
+  
   const endpoint = process.env.SUBSCRIPTION_STATUS_URL;
 
   const requestBody = {
     AccountNo: accountNo,
     MobileNumber: mobileNumber,
-    SubscriptionStatus: subscriptionStatus,
+    SubscriptionStatus: `${subscriptionStatus}`,
   };
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const response = await axios.post(endpoint, requestBody, {
+      const response = await api.post(endpoint, requestBody, {
         headers: {
+          ...eoceanHeaders,
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
@@ -34,22 +43,35 @@ export async function getSubscriptionStatus(accountNo, mobileNumber, subscriptio
 
       const data = response.data?.SubscriptionStatusResponse;
       if (!data) throw new Error("Invalid response from MCB Subscription API");
+      
+      const message = getErrorMessage(data.ResponseCode);
 
       // If not success, handle error messages
       if (data.ResponseCode !== "000000") {
-        const message = getErrorMessage(data.ResponseCode, data.AccountNo);
-        return { raw: data, error: message };
+        if(!message){
+        logger.warn(
+          `[SubscriptionStatus] No Error code found response for ${mobileNumber} Account: ${accountNo} - Code: ${data.ResponseCode}, Message: ${message}`
+        );
+        return { raw: null,message:null};
+      }
+        // const message = getErrorMessage2(data.ResponseCode, data.AccountNo) || getErrorMessage(data.ResponseCode) || 'Unknown error occurred';
+        return { raw: data, message: message };
       }
 
       // Success message handling
       const formattedMessage =
-        subscriptionStatus === "Y"
-          ? `Dear Customer, SMS Alerts are now active on A/C${data.AccountNo}. at PKR ${data.Fee}+tax/month. To unsubscribe, send UNSUB (space) <last 4 digits of A/C#> to 6222. T&Cs apply`
-          : `Dear Customer, you have unsubscribed from SMS Alerts for A/C${data.AccountNo}. To re-subscribe, send SUB (space) <last 4 digits of A/C#> to 6222 anytime`;
+  subscriptionStatus === "Y"
+    ? `Dear Customer, SMS OTC Alerts are now active on A/C*${data.AccountNo} at PKR ${data.Fee}+tax/month. To unsubscribe, send UNSUB (space) <last 4 digits of A/C#> to 6222. T&Cs apply.`
+    : `Dear Customer, you have unsubscribed from SMS OTC Alerts for A/C ${data.AccountNo}. To re-subscribe, send SUB (space) <last 4 digits of A/C#> to 6222. Helpline: 042111000622`;
+
+      // const formattedMessage =
+      //   subscriptionStatus === "Y"
+      //     ? `Dear Customer, SMS Alerts are now active on A/C${data.AccountNo}. at PKR ${data.Fee}+tax/month. To unsubscribe, send UNSUB (space) <last 4 digits of A/C#> to 6222. T&Cs apply`
+      //     : `Dear Customer, you have unsubscribed from SMS Alerts for A/C${data.AccountNo}. To re-subscribe, send SUB (space) <last 4 digits of A/C#> to 6222 anytime`;
 
       return {
         raw: data,
-        message: formattedMessage.trim(),
+        message: formattedMessage?.trim(),
       };
     } catch (error) {
       console.error(`❌ Attempt ${attempt} failed:`, error.response?.data || error.message);
@@ -67,7 +89,7 @@ export async function getSubscriptionStatus(accountNo, mobileNumber, subscriptio
 /**
  * Maps response codes to customer-friendly messages
  */
-function getErrorMessage(code, acc) {
+function getErrorMessage2(code) {
   switch (code) {
     case "000136":
       return `Dear Customer, we couldn’t verify your details due to a mismatch in our records. Please visit your branch or call our helpline at 042111000622 for assistance`;
@@ -82,6 +104,6 @@ function getErrorMessage(code, acc) {
     case "000143":
       return `Dear Customer, you are not subscribed to this service. To subscribe, send SUB (space) <last 4 digits of A/C#> to 6222. Helpline: 042111000622`;
     default:
-      return `Dear Customer, your request could not be processed at this time. Please try again later or contact our helpline.`;
+      return null;
   }
 }

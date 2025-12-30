@@ -8,7 +8,7 @@ import 'dotenv/config'
 // __dirname workaround for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-console.log(process.env.LOG_TO_FILE);
+console.log("LOGS ACTIVE ------",process.env.LOG_TO_FILE);
 
 const logToFile = process.env.LOG_TO_FILE;
 

@@ -40,31 +40,38 @@ async function fetchAccountInfo(accountNo, mobileNumber) {
         },
       });
       
-      const data = response.data?.AccountInformationResponse;
+      const data = response?.data?.AccountInformationResponse;
 
         if (!data) {
         throw new Error('Invalid response from EOCEAN API');
       }
       logger.info(
-        `[AccountInfo] Response received for ${mobileNumber}: Code=${data.ResponseCode}`
+        `[AccountInfo] Response received for ${mobileNumber}: Code=${data?.ResponseCode}`
       );
 
-      const message = getErrorMessage(data.ResponseCode);
+      const message = getErrorMessage(data?.ResponseCode);
+
       if (data.ResponseCode !== '000000') {
       logger.warn(
-          `[AccountInfo] Non-success response for ${mobileNumber} - Code: ${data.ResponseCode}, Message: ${message}`
+          `[AccountInfo] Non-success response for ${mobileNumber} - Code: ${data?.ResponseCode}, Message: ${message}`
         );
+      if(!message){
+      logger.warn(
+          `[AccountInfo] No Error code found response for ${mobileNumber} Account: ${accountNo} - Code: ${data?.ResponseCode}, Message: ${message}`
+        );
+        return { raw: null,message:null};
+      }
         return { raw: data,message:message};
       }
 
       // Format the response according to your template
       const formattedMessage = `
                                 Dear Customer, Account Details:
-                                ${data.AccountTitle}
-                                Account: ${data.AccountNo}
-                                IBAN: ${data.IBAN}
-                                Status: ${data.AccountStatus}
-                                Branch: ${data.BranchName} - ${data.BranchCode}
+                                ${data?.AccountTitle}
+                                Account: ${data?.AccountNo}
+                                IBAN: ${data?.IBAN}
+                                Status: ${data?.AccountStatus}
+                                Branch: ${data?.BranchName} - ${data?.BranchCode}
                                 `;
       logger.info(
         `[AccountInfo] Successfully fetched account info for ${mobileNumber}`

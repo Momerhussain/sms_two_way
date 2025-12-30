@@ -1,5 +1,9 @@
 import axios from "axios";
 import  authToken  from './auth.js';
+import generateHeaders from "../utils/helper.js";
+import { api } from "../utils/axios-client.js";
+import { getErrorMessage } from "../utils/errorCodes.js";
+import logger from "../utils/logger.js";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000; // 1 second between retries
@@ -13,7 +17,9 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * @returns {Promise<object>} - Formatted balance inquiry response
  */
 export async function getBalanceInquiry(accountNo, mobileNumber) {
-  const token = await authToken()
+  const token = await authToken();
+  const eoceanHeaders = generateHeaders();
+  
   const endpoint = process.env.BALANCE_INQUIRY_URL;
 
   const requestBody = {
@@ -23,22 +29,30 @@ export async function getBalanceInquiry(accountNo, mobileNumber) {
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const response = await axios.post(endpoint, requestBody, {
+      const response = await api.post(endpoint, requestBody, {
         headers: {
+          ...eoceanHeaders,
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
 
       const data = response.data?.BalanceInquiryResponse;
-
       if (!data) throw new Error("Invalid response from MCB Balance Inquiry API");
+      const message = getErrorMessage(data.ResponseCode);
 
       // Check if API returned success
       if (data.ResponseCode !== "000000") {
+          if(!message){
+            logger.warn(
+                `[BalanceInquiry] No Error code found response for ${mobileNumber} Account: ${accountNo} - Code: ${data.ResponseCode}, Message: ${message}`
+              );
+          return { raw: null,message:null};
+          }
+
         return {
           raw: data,
-          error: data.ResponseMessage || "Request failed",
+          message: message,
         };
       }
 

@@ -3,6 +3,7 @@ import  authToken  from './auth.js';
 import { getErrorMessage } from '../utils/errorCodes.js';
 import generateHeaders from '../utils/helper.js';
 import { api } from '../utils/axios-client.js';
+import logger from '../utils/logger.js';
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000; // 1 second
@@ -47,17 +48,23 @@ async function requestEStatement(accountNo, mobileNumber, frequency, subscriptio
       if (!data) {
         throw new Error('Invalid response from EOCEAN API');
       }
-      console.log(data.ResponseCode,'data.ResponseCode');
       
       const message = getErrorMessage(data.ResponseCode);
 
-      if (data.ResponseCode !== '000125') {
+
+      if (data.ResponseCode !== '000000') {
+          if(!message){
+      logger.warn(
+          `[Estatement] No Error code found response for ${mobileNumber} Account: ${accountNo} - Code: ${data.ResponseCode}, Message: ${message}`
+        );
+        return { raw: null,message:null};
+      }
         return { raw: data, message: message };
       }
 
       // Format response according to template
       const formattedMessage = `
-Dear Customer, your E-Statement for Account No. *${data.AccountNo}* has been sent to your registered email address. Stay updated on all transactions! Helpline: 042111000622
+Dear Customer, your E-Statement for Account No. *${data.AccountNo} has been sent to your registered email address. Stay updated on all transactions! Helpline: 042111000622
 `;
 
       return {

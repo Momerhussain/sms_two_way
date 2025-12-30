@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
-import { userRouter } from './routes/user.routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { userRouter2 } from './routes/incoming.route.js';
 
@@ -13,7 +12,6 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 // Routes
-app.use('/api/users', userRouter);
 app.use('/api/incoming', userRouter2);
 
 // Health Check
