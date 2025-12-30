@@ -1,4 +1,3 @@
-import axios from 'axios';
 import  authToken  from './auth.js';
 import { getErrorMessage } from '../utils/errorCodes.js';
 import generateHeaders from '../utils/helper.js';
@@ -84,12 +83,3 @@ Dear Customer, your E-Statement for Account No. *${data.AccountNo} has been sent
 }
 
 export default requestEStatement;
-async function test() {
-  try {
-    const result = await requestEStatement('3652', '923012240575', 'YEARLY', 'YES', 'N');
-    console.log('Raw:', result.raw);
-    console.log('Message:', result.message);
-  } catch (err) {
-    console.error(err.message);
-  }
-}

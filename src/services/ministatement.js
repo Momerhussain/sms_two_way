@@ -1,4 +1,3 @@
-import axios from 'axios';
 import authToken from './auth.js';
 import { getErrorMessage } from '../utils/errorCodes.js';
 import generateHeaders from '../utils/helper.js';
@@ -119,13 +118,3 @@ async function getMiniStatement(accountNo, mobileNumber) {
 
 export default getMiniStatement;
 
-// Test function
-async function test() {
-  try {
-    const result = await getMiniStatement('8319', '923007476638');
-    console.log('Raw:', result.raw);
-    console.log('Message:', result.message);
-  } catch (err) {
-    console.error(err.message);
-  }
-}

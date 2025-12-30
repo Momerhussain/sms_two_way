@@ -1,4 +1,3 @@
-import axios from 'axios';
 import  authToken  from './auth.js';
 import { getErrorMessage } from '../utils/errorCodes.js';
 import { api } from '../utils/axios-client.js';
@@ -66,12 +65,4 @@ Dear Customer, need help with SMS Banking or other services? Please call us at 0
   }
 }
 
-async function test() {
-  try {
-    const result = await getHelpAssistance();
-    console.log('Raw:', result.raw);
-    console.log('Message:', result.message);
-  } catch (err) {
-    console.error(err.message);
-  }
-}
+

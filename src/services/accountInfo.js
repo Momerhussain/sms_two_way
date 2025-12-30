@@ -1,4 +1,3 @@
-import axios from 'axios';
 import  authToken  from './auth.js';
 import { getErrorMessage } from '../utils/errorCodes.js';
 import logger from '../utils/logger.js';
@@ -102,14 +101,3 @@ async function fetchAccountInfo(accountNo, mobileNumber) {
 }
 
 export default fetchAccountInfo;
-
-
-// async function test() {
-//   try {
-//     const result = await getAccountInfo('8319', '923007476638');
-//     console.log('Raw:', result.raw);
-//     console.log('Message:', result.message);
-//   } catch (err) {
-//     console.error(err.message);
-//   }
-// }

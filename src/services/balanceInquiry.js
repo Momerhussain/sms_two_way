@@ -1,4 +1,3 @@
-import axios from "axios";
 import  authToken  from './auth.js';
 import generateHeaders from "../utils/helper.js";
 import { api } from "../utils/axios-client.js";

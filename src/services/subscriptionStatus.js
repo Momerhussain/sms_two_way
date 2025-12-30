@@ -1,4 +1,3 @@
-import axios from "axios";
 import  authToken  from './auth.js';
 import { api } from "../utils/axios-client.js";
 import generateHeaders from "../utils/helper.js";
@@ -18,8 +17,6 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * @returns {Promise<object>} Formatted subscription status response
  */
 export async function getSubscriptionStatus(accountNo, mobileNumber, subscriptionStatus) {
-  console.log(subscriptionStatus,'subscriptionStatus-----------------');
-  
   const token = await authToken();
   const eoceanHeaders = generateHeaders();
   

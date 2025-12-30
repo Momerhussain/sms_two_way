@@ -50,6 +50,5 @@ const logger = winston.createLogger({
   transports,
 });
 
-// logger.info('PM2 app started successfully');
 
 export default logger;
